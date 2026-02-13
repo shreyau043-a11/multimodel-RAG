@@ -1,6 +1,6 @@
 import streamlit as st
 from rag.chunking import chunk_text
-from rag.retriever import VectorStore
+from rag.retrieval import VectorStore
 from rag.reranker import rerank
 from rag.llm import generate_answer
 from rag.vision import get_image_embedding
