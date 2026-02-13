@@ -1,5 +1,8 @@
 streamlit
-pypdf
 faiss-cpu
+sentence-transformers
+transformers
+torch
+Pillow
 numpy
-requests
+groq
