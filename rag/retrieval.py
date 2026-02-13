@@ -1,29 +1,36 @@
 import faiss
 import numpy as np
+from rag.embeddings import get_embeddings, get_text_embedding
 
 
-class FAISSRetriever:
-    def __init__(self, embeddings, metadata):
-        self.embeddings = np.array(embeddings).astype("float32")
-        self.metadata = metadata
+class VectorStore:
+    def __init__(self):
+        self.index = None
+        self.texts = []
 
-        dim = self.embeddings.shape[1]
-        self.index = faiss.IndexFlatL2(dim)
-        self.index.add(self.embeddings)
+    def add_texts(self, texts):
+        embeddings = get_embeddings(texts)
+        embeddings = np.array(embeddings).astype("float32")
 
-    def search(self, query_embedding, top_k=5, filter_type=None):
-        query = np.array(query_embedding).astype("float32")
-        distances, indices = self.index.search(query, top_k)
+        # Ensure 2D
+        if len(embeddings.shape) == 1:
+            embeddings = embeddings.reshape(1, -1)
 
-        results = []
-        scores = []
+        # 🔥 Automatically create index using embedding dimension
+        if self.index is None:
+            dimension = embeddings.shape[1]
+            self.index = faiss.IndexFlatL2(dimension)
 
-        for idx, dist in zip(indices[0], distances[0]):
-            if filter_type:
-                if self.metadata[idx]["type"] != filter_type:
-                    continue
+        self.index.add(embeddings)
+        self.texts.extend(texts)
 
-            results.append(idx)
-            scores.append(float(1 / (1 + dist)))  # convert to similarity
+    def search(self, query, top_k=3):
+        query_vector = get_text_embedding(query)
+        query_vector = np.array(query_vector).astype("float32")
 
-        return results, scores
+        if len(query_vector.shape) == 1:
+            query_vector = query_vector.reshape(1, -1)
+
+        distances, indices = self.index.search(query_vector, top_k)
+
+        return [self.texts[i] for i in indices[0]]
