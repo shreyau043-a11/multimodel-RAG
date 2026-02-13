@@ -1,27 +1,43 @@
-import requests
-from config import GROQ_MODEL
+import os
+from groq import Groq
 
+# Get API key from environment (Streamlit Secrets)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-def ask_llm(context, query, groq_key, model=None, temperature=0.3):
-    model_name = model if model else GROQ_MODEL
+if not GROQ_API_KEY:
+    raise ValueError("GROQ_API_KEY is not set in environment")
 
-    url = "https://api.groq.com/openai/v1/chat/completions"
+client = Groq(api_key=GROQ_API_KEY)
 
-    headers = {
-        "Authorization": f"Bearer {groq_key}",
-        "Content-Type": "application/json"
-    }
+def generate_answer(query, context_docs):
+    if not context_docs:
+        context = "No relevant documents found."
+    else:
+        context = "\n\n".join(context_docs)
 
-    payload = {
-        "model": model_name,
-        "temperature": temperature,
-        "messages": [
-            {"role": "system", "content": context},
-            {"role": "user", "content": query}
-        ]
-    }
+    prompt = f"""
+You are a helpful assistant.
 
-    response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
+Use the context below to answer the question.
 
-    return response.json()["choices"][0]["message"]["content"]
+Context:
+{context}
+
+Question:
+{query}
+"""
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+        )
+
+        return response.choices[0].message.content
+
+    except Exception as e:
+        return f"GROQ ERROR: {str(e)}"
