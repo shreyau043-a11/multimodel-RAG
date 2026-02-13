@@ -1,35 +1,24 @@
-import requests
+from transformers import CLIPProcessor, CLIPModel
+from PIL import Image
+import torch
+import numpy as np
+
+model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
 
-def describe_image(image_bytes, groq_key):
-    url = "https://api.groq.com/openai/v1/chat/completions"
+def get_image_embedding(image_file):
+    image = Image.open(image_file).convert("RGB")
 
-    headers = {
-        "Authorization": f"Bearer {groq_key}",
-        "Content-Type": "application/json"
-    }
+    inputs = processor(images=image, return_tensors="pt")
 
-    payload = {
-        "model": "llama-3.2-11b-vision-preview",
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Describe this image in detail."},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{image_bytes.decode('latin1')}"
-                        }
-                    }
-                ]
-            }
-        ]
-    }
+    with torch.no_grad():
+        outputs = model.get_image_features(**inputs)
 
-    response = requests.post(url, headers=headers, json=payload)
+    # 🔥 Convert safely to numpy
+    if isinstance(outputs, torch.Tensor):
+        embedding = outputs.cpu().numpy()
+    else:
+        embedding = outputs[0].cpu().numpy()
 
-    if response.status_code == 200:
-        return response.json()["choices"][0]["message"]["content"]
-
-    return None
+    return embedding[0]
