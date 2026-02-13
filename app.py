@@ -13,8 +13,8 @@ from config import (
 from rag.embeddings import get_jina_embeddings
 from rag.vision import describe_image
 from rag.chunking import chunk_text
-from rag.retriever import FAISSRetriever
-from rag.reranker import simple_rerank
+from rag.retrieval import FAISSRetriever
+from rag.reranke import simple_rerank
 from rag.llm import ask_llm
 
 
